@@ -16,7 +16,8 @@
     <fullyQualifiedTypeName name="billing.BillingResponse"/>
     <fullyQualifiedTypeName name="billing.BillingServiceGrpc"/>
     <fullyQualifiedTypeName name="billing.BillingServiceGrpc.BillingServiceBlockingStub"/>
+    <fullyQualifiedTypeName name="billing.BillingRequest"/>
+    <fullyQualifiedTypeName name="com.google.protobuf.InvalidProtocolBufferException"/>
     <fullyQualifiedTypeName name="org.slf4j.LoggerFactory"/>
     <fullyQualifiedTypeName name="org.slf4j.Logger"/>
-    <fullyQualifiedTypeName name="billing.BillingRequest"/>
 </qualifiedTypeNameHistroy>

@@ -2,6 +2,7 @@
 <section name="Workbench">
 	<section name="MavenProjectImportWizardPage">
 		<list key="rootDirectory">
+			<item value="/home/bhargav/Desktop/patientManagement/analytics-service"/>
 			<item value="/home/bhargav/Desktop/patientManagement/billing-service"/>
 			<item value="/home/bhargav/Desktop/patientManagement/patient-service"/>
 		</list>

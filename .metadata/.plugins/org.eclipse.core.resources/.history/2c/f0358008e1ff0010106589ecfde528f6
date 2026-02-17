@@ -1,8 +1,0 @@
-package com.pm.patient_service.grpc;
-
-import org.springframework.stereotype.Service;
-
-@Service
-public class BillingServiceGrpcClient {
-
-}
