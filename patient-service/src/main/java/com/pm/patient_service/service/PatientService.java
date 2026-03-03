@@ -7,8 +7,13 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import com.pm.patient_service.dto.PagedPatientResponseDTO;
 import com.pm.patient_service.dto.PatientRequestDTO;
 import com.pm.patient_service.dto.PatientResponseDTO;
 import com.pm.patient_service.exception.EmailAlreadyExistsException;
@@ -25,55 +30,70 @@ public class PatientService {
 	private static final Logger log = LoggerFactory.getLogger(PatientService.class);
 
 	private PatientRepository patientRepository;
-	private final BillingServiceGrpcClient billingServiceGrpcClient; 
+	private final BillingServiceGrpcClient billingServiceGrpcClient;
 	private final KafkaProducer kafkaProducer;
 
 	// constructor (dependency injection method)
-	public PatientService(PatientRepository patientRepository,
-			BillingServiceGrpcClient billingServiceGrpcClient,
+	public PatientService(PatientRepository patientRepository, BillingServiceGrpcClient billingServiceGrpcClient,
 			KafkaProducer kafkaProducer) {
 		this.patientRepository = patientRepository;
 		this.billingServiceGrpcClient = billingServiceGrpcClient;
 		this.kafkaProducer = kafkaProducer;
 	}
 
-	public List<PatientResponseDTO> getPatients() {
-		List<Patient> patients = patientRepository.findAll();
-		List<PatientResponseDTO> patientResponseDTOs = patients.stream().map(patient -> PatientMapper.toDTO(patient))
-				.collect(Collectors.toList());
-		return patientResponseDTOs;
+	// http://localhost:4004/api/patients?page=1&size=10
+	public PagedPatientResponseDTO getPatients(int page, int size, String sort, String sortField, String searchValue) {
+
+		Pageable pageable = PageRequest.of(page-1, size,
+				sort.equalsIgnoreCase("desc") ?
+						Sort.by(sortField).descending() : 
+						Sort.by(sortField).ascending());
+		
+		Page<Patient> patientPage;
+		
+		if(searchValue == null || searchValue.isBlank()) {
+			patientPage = patientRepository.findAll(pageable);
+		}else {
+			patientPage = patientRepository.findByNameContainingIgnoreCase(searchValue, pageable);
+		}
+		
+		List<PatientResponseDTO> patientResponseDtos = patientPage.getContent()
+																.stream()
+																.map(PatientMapper::toDTO)
+																.toList();
+		
+		return new PagedPatientResponseDTO(
+				patientResponseDtos,
+				patientPage.getNumber(),
+				patientPage.getSize(),
+				patientPage.getTotalPages(),
+				(int)patientPage.getTotalElements());
 	}
 
 	public PatientResponseDTO createPatient(PatientRequestDTO patientRequestDTO) {
 
-	    String email = patientRequestDTO.getEmail();
+		String email = patientRequestDTO.getEmail();
 
-	    if (patientRepository.existsByEmail(email)) {
-	        throw new EmailAlreadyExistsException(
-	                "A patient already exists with this email: " + email
-	        );
-	    }
+		if (patientRepository.existsByEmail(email)) {
+			throw new EmailAlreadyExistsException("A patient already exists with this email: " + email);
+		}
 
-	    log.info("CREATE PATIENT SERVICE HIT");
+		log.info("CREATE PATIENT SERVICE HIT");
 
-	    Patient patient = PatientMapper.toModel(patientRequestDTO);
-	    Patient savedPatient = patientRepository.save(patient);
+		Patient patient = PatientMapper.toModel(patientRequestDTO);
+		Patient savedPatient = patientRepository.save(patient);
 
-	    log.info("PATIENT SAVED, calling billing gRPC");
+		log.info("PATIENT SAVED, calling billing gRPC");
 
-	    billingServiceGrpcClient.createBillingAccount(
-	            savedPatient.getId().toString(),
-	            savedPatient.getName(),
-	            savedPatient.getEmail()
-	    ); 	 	
-	    
-	    kafkaProducer.sendEvent(savedPatient);
+		billingServiceGrpcClient.createBillingAccount(savedPatient.getId().toString(), savedPatient.getName(),
+				savedPatient.getEmail());
 
-	    log.info("BILLING gRPC CALL DONE");
+		kafkaProducer.sendEvent(savedPatient);
 
-	    return PatientMapper.toDTO(savedPatient);
+		log.info("BILLING gRPC CALL DONE");
+
+		return PatientMapper.toDTO(savedPatient);
 	}
-
 
 	public PatientResponseDTO updatePatient(UUID id, PatientRequestDTO patientRequestDTO) {
 		Patient patient = patientRepository.findById(id)
