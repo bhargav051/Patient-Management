@@ -3,10 +3,11 @@ package com.pm.patient_service.service;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -40,10 +41,16 @@ public class PatientService {
 		this.billingServiceGrpcClient = billingServiceGrpcClient;
 		this.kafkaProducer = kafkaProducer;
 	}
-
-	// http://localhost:4004/api/patients?page=1&size=10
+	
+	@Cacheable(
+			value = "patients",
+			key = "#page + '-' + #size + '-' + #sort + '-' + #sortField",
+			condition = "#searchValue == ''"
+	)
 	public PagedPatientResponseDTO getPatients(int page, int size, String sort, String sortField, String searchValue) {
-
+		
+		log.info("[REDIS]: Cache miss - fetching from DB");
+		
 		Pageable pageable = PageRequest.of(page-1, size,
 				sort.equalsIgnoreCase("desc") ?
 						Sort.by(sortField).descending() : 
@@ -69,7 +76,8 @@ public class PatientService {
 				patientPage.getTotalPages(),
 				(int)patientPage.getTotalElements());
 	}
-
+	
+	@CacheEvict(value = "patients", allEntries = true)
 	public PatientResponseDTO createPatient(PatientRequestDTO patientRequestDTO) {
 
 		String email = patientRequestDTO.getEmail();
@@ -94,7 +102,8 @@ public class PatientService {
 
 		return PatientMapper.toDTO(savedPatient);
 	}
-
+	
+	@CacheEvict(value = "patients", allEntries = true)
 	public PatientResponseDTO updatePatient(UUID id, PatientRequestDTO patientRequestDTO) {
 		Patient patient = patientRepository.findById(id)
 				.orElseThrow(() -> new PatientNotFoundException("patient not found with ID: " + id));
@@ -114,7 +123,8 @@ public class PatientService {
 
 		return PatientMapper.toDTO(updatedPatient);
 	}
-
+	
+	@CacheEvict(value = "patients", allEntries = true)
 	public void DeletePatient(UUID id) {
 		patientRepository.deleteById(id);
 	}

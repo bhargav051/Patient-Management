@@ -8,6 +8,9 @@ public class PagedPatientResponseDTO {
 	private int size;
 	private int totalPage;
 	private int totalElements;
+	
+	public PagedPatientResponseDTO() {
+    }
 
 	public PagedPatientResponseDTO(List<PatientResponseDTO> patientResponseDTO, int page, int size, int totalPage,
 			int totalElements) {

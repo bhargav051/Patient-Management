@@ -34,7 +34,8 @@ public class PatientController {
 	public PatientController(PatientService patientService) {
 		this.patientService = patientService;
 	}
-
+	
+	// http://localhost:4004/api/patients?page=1&size=10
 	@GetMapping
 	@Operation(summary = "Get Patients")
 	public ResponseEntity<PagedPatientResponseDTO> getPatients(@RequestParam(defaultValue = "1") int page,

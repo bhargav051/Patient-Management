@@ -6,8 +6,21 @@ auth:
     url: http://auth-service:4005
 
 spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+
   cloud:
     gateway:
+
+      default-filters:
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 5
+            redis-rate-limiter.burstCapacity: 5
+            key-resolver: "#{@ipKeyResolver}"
+
       routes:
 
         # ===============================
@@ -22,7 +35,7 @@ spring:
 
 
         # ===============================
-        # Patient Service Route (Protected)
+        # Patient Service Route
         # ===============================
         - id: patient-service-route
           uri: http://patient-service:4000
@@ -34,11 +47,11 @@ spring:
 
 
         # ===============================
-        # Patient Swagger Docs Route
+        # Patient Swagger Docs
         # ===============================
         - id: api-docs-patient-route
           uri: http://patient-service:4000
           predicates:
             - Path=/api-docs/patients
           filters:
-            - RewritePath=/api-docs/patients,/v3/api-docs=
+            - RewritePath=/api-docs/patients,/v3/api-docs

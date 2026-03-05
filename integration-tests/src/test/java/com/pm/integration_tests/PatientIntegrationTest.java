@@ -43,4 +43,40 @@ public class PatientIntegrationTest {
         	.statusCode(200)
         	.body("patients", notNullValue());
     }
+	
+	@Test
+	public void shouldReturn429WhenRateLimitExceeded() {
+
+	    String loginPayload = """
+	            {
+	                "email":"testuser@test.com",
+	                "password":"password123"
+	            }
+	            """;
+
+	    String token = given()
+	            .contentType("application/json")
+	            .body(loginPayload)
+	            .when()
+	            .post("/auth/login")
+	            .then()
+	            .statusCode(200)
+	            .extract()
+	            .jsonPath()
+	            .get("token");
+
+	    Response lastResponse = null;
+
+	    // send multiple requests quickly
+	    for (int i = 0; i < 10; i++) {
+
+	        lastResponse = given()
+	                .header("Authorization", "Bearer " + token)
+	                .when()
+	                .get("/api/patients");
+	    }
+
+	    lastResponse.then()
+	            .statusCode(429);
+	}
 }
