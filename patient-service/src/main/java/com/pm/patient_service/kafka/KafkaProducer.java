@@ -9,6 +9,7 @@ import org.springframework.kafka.support.SendResult;
 
 import com.pm.patient_service.model.Patient;
 
+import billing.events.BillingAccountEvent;
 import patient.events.PatientEvent;
 
 @Service
@@ -40,6 +41,28 @@ public class KafkaProducer {
                 metadata.offset());
                 
         } catch (Exception e) {
+            log.error("Failed to send message to Kafka", e);
+            throw new RuntimeException("Kafka publish failed", e);
+        }
+	}
+	
+	// for circuit breaker
+	public void sendBillingAccountEvent(String patientId, String name, String email) {
+		try {
+			BillingAccountEvent event = BillingAccountEvent.newBuilder()
+															.setPatientId(patientId)
+															.setName(name)
+															.setEmail(email)
+															.setEventType("BILLING_ACCOUNT_CREATE_REQUESTED")
+															.build();
+			
+			SendResult<String, byte[]> result = kafkaTemplate.send("billing-account", event.toByteArray()).get();
+			RecordMetadata metadata = result.getRecordMetadata();
+			log.info("Billing account creation info send to kafka | Topic: {}, Partition: {}, Offset: {}",
+					metadata.topic(),
+					metadata.partition(),
+					metadata.offset());
+		} catch (Exception e) {
             log.error("Failed to send message to Kafka", e);
             throw new RuntimeException("Kafka publish failed", e);
         }
