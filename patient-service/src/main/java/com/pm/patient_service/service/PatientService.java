@@ -96,7 +96,7 @@ public class PatientService {
 		billingServiceGrpcClient.createBillingAccount(savedPatient.getId().toString(), savedPatient.getName(),
 				savedPatient.getEmail());
 
-		kafkaProducer.sendEvent(savedPatient);
+		kafkaProducer.sendPatientCreatedEvent(savedPatient);
 
 		log.info("BILLING gRPC CALL DONE");
 
@@ -120,6 +120,8 @@ public class PatientService {
 		patient.setDateOfBirth(LocalDate.parse(patientRequestDTO.getDateOfBirth()));
 
 		Patient updatedPatient = patientRepository.save(patient);
+		
+		kafkaProducer.sendPatientUpdatedEvent(updatedPatient);
 
 		return PatientMapper.toDTO(updatedPatient);
 	}

@@ -22,7 +22,7 @@ public class KafkaProducer {
 		this.kafkaTemplate = kafkaTemplate;
 	}
 
-	public void sendEvent(Patient patient) {
+	public void sendPatientCreatedEvent(Patient patient) {
 		try {
             PatientEvent event = PatientEvent.newBuilder()
                     .setPatientId(patient.getId().toString())
@@ -33,6 +33,30 @@ public class KafkaProducer {
 
             // SYNCHRONOUS send with proper error handling
             SendResult<String, byte[]> result = kafkaTemplate.send("patient", event.toByteArray()).get();
+            
+            RecordMetadata metadata = result.getRecordMetadata();
+            log.info("Message COMMITTED to Kafka | Topic: {}, Partition: {}, Offset: {}", 
+                metadata.topic(), 
+                metadata.partition(), 
+                metadata.offset());
+                
+        } catch (Exception e) {
+            log.error("Failed to send message to Kafka", e);
+            throw new RuntimeException("Kafka publish failed", e);
+        }
+	}
+	
+	public void sendPatientUpdatedEvent(Patient patient) {
+		try {
+            PatientEvent event = PatientEvent.newBuilder()
+                    .setPatientId(patient.getId().toString())
+                    .setName(patient.getName())
+                    .setEmail(patient.getEmail())
+                    .setEventType("PATIENT_UPDATED")
+                    .build();
+
+            // SYNCHRONOUS send with proper error handling
+            SendResult<String, byte[]> result = kafkaTemplate.send("patient_updated", event.toByteArray()).get();
             
             RecordMetadata metadata = result.getRecordMetadata();
             log.info("Message COMMITTED to Kafka | Topic: {}, Partition: {}, Offset: {}", 
